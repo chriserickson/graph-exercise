@@ -11,6 +11,8 @@ public final class VertexId<VertexIdType> {
         this.id = id;
     }
 
+    VertexIdType getId() { return id; }
+
     @Override
     public int hashCode() {
         return id.hashCode();
@@ -26,7 +28,9 @@ public final class VertexId<VertexIdType> {
         return "Vertex: " + id.toString();
     }
 
-    public static VertexId fromId(long id) {
+    public static <VertexIdType> VertexId<VertexIdType> fromId(VertexIdType id) {
+        Objects.requireNonNull(id);
+
         return new VertexId(id);
     }
 }

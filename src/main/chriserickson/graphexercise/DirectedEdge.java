@@ -39,7 +39,8 @@ public final class DirectedEdge<VertexIdType> {
 
     @Override
     public String toString() {
-        return super.toString();
+
+        return "Edge: " + from.id.toString() + " - " + to.id.toString();
     }
 
     static public <VertexIdType> DirectedEdge<VertexIdType> betweenVerticies(VertexId<VertexIdType> from, VertexId<VertexIdType> to) {

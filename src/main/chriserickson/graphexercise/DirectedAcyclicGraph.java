@@ -74,7 +74,7 @@ public final class DirectedAcyclicGraph<VertexIdType> {
             while (itrVerticiesWithoutIncomingEdges.nonEmpty()) {
                 VertexId<IdType> n = itrVerticiesWithoutIncomingEdges.head();
                 itrVerticiesWithoutIncomingEdges = itrVerticiesWithoutIncomingEdges.tail();
-                sortedVerticies.append(n);
+                sortedVerticies = sortedVerticies.append(n);
 
                 Set<DirectedEdge<IdType>> edgesFromN = itrGraph.edges.filter(e -> e.from.equals(n));
 
@@ -82,7 +82,7 @@ public final class DirectedAcyclicGraph<VertexIdType> {
                     VertexId<IdType> m = e.to;
                     itrGraph = itrGraph.removeEdge(e);
                     if (!itrGraph.edges.exists(i -> i.to.equals(m)))
-                        itrVerticiesWithoutIncomingEdges.add(m);
+                        itrVerticiesWithoutIncomingEdges = itrVerticiesWithoutIncomingEdges.add(m);
                 }
             }
 
@@ -108,14 +108,16 @@ public final class DirectedAcyclicGraph<VertexIdType> {
         final DirectedAcyclicGraph<IdType> graph,
         final VertexId<IdType> vertex) {
 
+        if (!graph.topologicalOrder.contains(vertex))
+            return Option.none();
+
         // Only grab the portion of the topological sort to the right of the node we are asking about.
         final List<VertexId<IdType>> verticiesToProcess =
             graph
                 .topologicalOrder
                 .reverse()
-                .takeUntil(i -> i.equals(vertex));
-
-
+                .takeUntil(i -> i.equals(vertex))
+                .append(vertex);
 
         // Fold to the right from the reversed topological sort. The longest path from a terminal node is just itself.
         // Note, this is not deterministic, multiple longest paths may exist.
@@ -127,20 +129,29 @@ public final class DirectedAcyclicGraph<VertexIdType> {
                     // longest path. Prepend this element to that list and store for this element.
                     pathAccumulator.put(
                         node,
-                        pathAccumulator
-                            .filterKeys(
-                                graph.getEdges()
-                                    .filter(e -> e.from.equals(node))
-                                    .map(DirectedEdge::getTo)
-                                    ::contains
-                            )
-                            .values()
-                            .maxBy(List::length)
-                            .map(l -> l.prepend(node))
-                            .getOrElse(List.of(node))
+                        longestPathLogic(graph, node, pathAccumulator)
                     )
                 );
 
         return longestPathByFromNode.get(vertex);
+    }
+
+    static <IdType> List<VertexId<IdType>> longestPathLogic(
+        DirectedAcyclicGraph<IdType> graph,
+        VertexId<IdType> node,
+        Map<VertexId, List<VertexId<IdType>>> resultsFromRestOfTopoSort
+    ) {
+        Set<VertexId<IdType>> childrenFromThisNode = graph.getEdges()
+            .filter(e -> e.from.equals(node))
+            .map(DirectedEdge::getTo);
+
+        Seq<List<VertexId<IdType>>> childResults =
+            resultsFromRestOfTopoSort
+                .filterKeys(childrenFromThisNode::contains)
+                .values();
+
+        Option<List<VertexId<IdType>>> longestChild = childResults.maxBy(List::length);
+
+        return longestChild.map(l -> l.prepend(node)).getOrElse(List.of(node));
     }
 }
